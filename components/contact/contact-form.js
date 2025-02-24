@@ -1,18 +1,65 @@
 import classes from "./contact-form.module.css";
-
+import { useState, useEffect } from "react";
+import Notification from "../ui/notification";
 function ContactForm() {
-  function sendMessageHandler(event) {
+  const [status, setStatus] = useState();
+
+  useEffect(() => {
+    if (status === "success" || status === "error") {
+      const timer = setTimeout(() => {
+        setStatus(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
+  async function sendMessageHandler(event) {
     event.preventDefault();
+    setStatus("pending");
     const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData);
-    fetch("/api/contact", {
-      method: "POST",
-      body: JSON.stringify(data),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const formDataObject = Object.fromEntries(formData);
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        body: JSON.stringify(formDataObject),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+        throw new Error(data.message || "Something went wrong!");
+      }
+    } catch (error) {
+      setStatus("error");
+      console.log(error);
+    }
     event.target.reset();
+  }
+  let notification;
+  if (status === "pending") {
+    notification = {
+      status: "pending",
+      title: "Sending message...",
+      message: "Your message is on its way!",
+    };
+  }
+  if (status === "success") {
+    notification = {
+      status: "success",
+      title: "Message sent!",
+      message: "Your message was sent successfully!",
+    };
+  }
+  if (status === "error") {
+    notification = {
+      status: "error",
+      title: "Error!",
+      message: "Something went wrong!",
+    };
   }
   return (
     <section className={classes.contact}>
@@ -36,6 +83,13 @@ function ContactForm() {
           <button type="submit">Send Message</button>
         </div>
       </form>
+      {notification && (
+        <Notification
+          status={notification.status}
+          title={notification.title}
+          message={notification.message}
+        />
+      )}
     </section>
   );
 }
