@@ -1,4 +1,6 @@
-function handler(req, res) {
+import { MongoClient } from "mongodb";
+
+async function handler(req, res) {
   const { method } = req;
 
   if (method === "POST") {
@@ -20,9 +22,22 @@ function handler(req, res) {
       name,
       message,
     };
-
-    console.log(newMessage);
-    res.status(201).json({ message: "Message stored!", message: newMessage });
+    try {
+      const client = await MongoClient.connect(
+        "mongodb+srv://dbUser:<GMisWIzNsWjfQ41h>@cluster0.wguti.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+      );
+    } catch {
+      res.status(500).json({ message: "Connecting to the database failed." });
+      return;
+    }
+    try {
+      await client.db("blogs").collection("messages").insertOne(newMessage);
+      client.close();
+      res.status(201).json({ message: "Message stored!", message: newMessage });
+    } catch (error) {
+      client.close();
+      res.status(500).json({ message: "Storing message failed." });
+    }
   }
 }
 
